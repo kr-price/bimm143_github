@@ -1,0 +1,265 @@
+---
+title: "Class 10: Structural Bioinformatics (Pt. 1)"
+author: "Kris Price (PID: A17464127"
+format: pdf
+toc: true
+---
+
+## Introduction to the RCSB Protein Data Bank (PDB)
+
+```{r}
+pdb <- read.csv("pdb_stats.csv")
+```
+
+### PDB Statistics
+
+> Q1: What is the proportion of each method in the PDB?
+
+```{r}
+sum(pdb$X.ray) / sum(pdb$Total)
+
+sum(pdb$EM) / sum(pdb$Total)
+
+sum(pdb$NMR) / sum(pdb$Total)
+
+sum(pdb$Integrative) / sum(pdb$Total)
+
+sum(pdb$Multiple.methods) / sum(pdb$Total)
+
+sum(pdb$Neutron) / sum(pdb$Total)
+
+sum(pdb$Other) / sum(pdb$Total)
+```
+
+- X-ray: 80.95%
+- EM: 12.84%
+- NMR: 5.9%
+
+- Integrative: 0.15%
+
+- Multiple methods: 0.1%
+
+- Neutron: 0.04%
+
+- Other: 0.01%
+
+> Q2: What is the total number of entries in the PDB?
+
+```{r}
+sum(pdb$Total)
+```
+There are 249,018 entries in the PDB.
+
+> Q3: Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?
+
+4,940 HIV-1 protease structures are in the current PDB.
+
+## Visualizing the HIV-1 protease structure
+
+### Delving deeper
+
+> Q4: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure?
+
+> Q5: There is a critical “conserved” water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have
+
+> Q6: Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain and the critical water (we recommend “Ball & Stick” for these side-chains). Add this figure to your Quarto document.
+
+> Discussion Topic: Can you think of a way in which indinavir, or even larger ligands and substrates, could enter the binding site?
+
+## Introduction to Bio3D in R
+
+### Reading PDB file data into R
+
+```{r}
+library(bio3d)
+
+pdb <- read.pdb("1hsg")
+
+pdb
+```
+
+> Q7: How many amino acid residues are there in this pdb object?
+
+198 amino acid residues.
+
+> Q8: Name one of the two non-protein residues?
+
+HOH.
+
+> Q9: How many protein chains are in this structure?
+
+There are 2 protein chains.
+
+To find the attributes of any object, you can use the `attributes()` function:
+
+```{r}
+attributes(pdb)
+```
+
+```{r}
+head(pdb$atom)
+```
+
+
+### Quick PDB visualization in R
+
+```{r}
+library(bio3dview)
+library(NGLVieweR)
+
+view.pdb(pdb) |>
+  setSpin()
+```
+
+Let's custom color the chains and highlight some key residues as spacefill/vdw:
+
+```{r}
+# Select the important ASP 25 residue
+sele <- atom.select(pdb, resno=25)
+
+view.pdb(pdb, cols=c("navy","teal"), 
+         highlight = sele,
+         highlight.style = "spacefill") |>
+  setRock()
+```
+
+
+### Predicting functional motions of a single structure
+
+```{r}
+adk <- read.pdb("6s36")
+
+adk
+```
+
+Normal mode analysis (NMA) is a structural bioinformatics method to predict protein flexibility and potential functional motions (a.k.a. conformational changes):
+
+```{r}
+m <- nma(adk)
+
+plot(m)
+```
+
+We can view a “movie” of these predicted motions by generating a molecular “trajectory” with the `mktrj()` function:
+
+```{r}
+mktrj(m, file = "adk_m7.pdb")
+```
+
+For a quicker display you can use the `view.nma()` function from the bio3dview package mentioned previously:
+
+```{r}
+view.nma(m, pdb=adk)
+```
+
+
+## Comparative structure analysis of Adenylate Kinase
+
+### Setup
+
+> Q10. Which of the packages above is found only on BioConductor and not CRAN?
+
+The `msa` package.
+
+> Q11. Which of the above packages is not found on BioConductor or CRAN?
+
+The `bio3dview` package.
+
+> Q12. True or False? Functions from the pak package can be used to install packages from GitHub and BitBucket?
+
+True.
+
+### Search and retrieve ADK structures
+
+First step is to find an ADK sequence:
+
+```{r}
+library(bio3d)
+id <- "1ake_A"
+aa <- get.seq(id)
+
+aa
+```
+
+> Q13. How many amino acids are in this sequence, i.e. how long is this sequence?
+
+214 amino acids.
+
+### Align and superpose structures
+
+Next step is to search the PDB database for all related entries:
+
+```{r}
+# blast <- blast.pdb(aa)
+# hits <- plot(blast)
+
+# blast$hit.tbl displays a list similar to BLAST results
+```
+
+The "top hits" are in the `hits` object. Now we can download these to our computer. Put these in a sub-folder (directory) called "pdbs" and use gzip to speed things up:
+
+```{r}
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+
+files <- get.pdb(hits$pdb.id, path = "pdbs", split = TRUE, gzip = TRUE)
+```
+
+These look like a hot mess...
+
+We can use the `pdbaln()` function to align and optionally fit (i.e. superpose) the PDB structures. Then, we could use `pdb.annotate()` to annotate each structure to its source species.
+
+This requires a BioConductor package called "msa" that we need to install. First, we install BiocManager. Then we use `BiocManager::install("msa")`
+
+```{r}
+pdbs <- pdbaln(files, fit = TRUE, exefile = "msa")
+pdbs
+```
+
+We could view these in R with **bio3dview** `view.pdbs()` function:
+
+```{r}
+library(bio3dview)
+view.pdbs(pdbs, colorScheme = "residue")
+```
+
+### Principle component analysis
+
+We can run PCA on our `pdbs` object using the `pca()` function from **bio3d**:
+
+```{r}
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+The `rmsd()` function will calculate all pairwise RMSD values of thet structural ensemble, which can facilitate clustering analysis based on the pairwise structural deviation:
+
+```{r}
+rd <- rmsd(pdbs)
+
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k = 3)
+
+plot(pc.xray, 1:2, col = "grey50", bg = grps.rd, pch = 21, cex = 1)
+```
+
+We can make a visualizatino of the major conformational difference (i.e. large-scale structure change) captured by our PCA analysis with the `mktrj()` function.
+
+```{r}
+pc1 <- mktrj(pc.xray, file = "pca.pdb")
+```
+
+Let's see in Molstar.
+
+### Normal Mode Analysis
+
+```{r}
+modes <- nma(pdbs)
+
+plot(modes, pdbs, col=grps.rd)
+```
+
+
+> Q14. What do you note about this plot? Are the black and colored lines similar or different? Where do you think they differ most and why?
+
+The black and colored lines both have similar peaks, but the colored lines have much greater fluctuations.

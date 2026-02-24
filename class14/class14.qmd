@@ -1,0 +1,232 @@
+---
+title: "Class 14: RNA-Seq analysis mini-project"
+author: "Kris Price (PID: A17464127)"
+format: pdf
+toc: true
+---
+
+## Differential Expression Analysis
+
+```{r, message = FALSE}
+library(DESeq2)
+```
+
+```{r}
+countData <- read.csv("data/GSE37704_featurecounts.csv", row.names = 1)
+colData <- read.csv("data/GSE37704_metadata.csv", row.names = 1)
+
+head(countData)
+```
+
+> Q1. Complete the code below to remove the troublesome first column from countData:
+
+```{r}
+countData <- as.matrix(countData[, -1])
+head(countData)
+```
+
+> Q2. Complete the code below to filter countData to exclude genes (i.e. rows) where we have 0 read count across all samples (i.e. columns):
+
+```{r}
+countData <- countData[!(rowSums(countData) == 0), ]
+head(countData)
+```
+
+### Running DESeq2
+
+```{r}
+dds <- DESeqDataSetFromMatrix(countData = countData,
+                             colData = colData,
+                             design = ~condition)
+dds <- DESeq(dds)
+dds
+```
+
+```{r}
+res <- results(dds)
+```
+
+> Q3. Call the summary() function on your results to get a sense of how many genes are up or down-regulated at the default 0.1 p-value cutoff.
+
+```{r}
+summary(res)
+```
+
+### Volcano Plot
+
+```{r, message = FALSE}
+library(ggplot2)
+```
+
+```{r}
+ggplot(res) +
+  aes(log2FoldChange,
+      -log(padj)) +
+  geom_point()
+```
+
+> Q4. Improve this plot by completing the below code, which adds color, axis labels and cutoff lines:
+
+```{r}
+# Make a color vector for all genes
+mycols <- rep("gray", nrow(res))
+
+# Color blue the genes with fold change above 2
+mycols[ abs(res$log2FoldChange) > 2 ] <- "blue"
+
+# Color gray those with adjusted p-value more than 0.01
+mycols[ res$padj > 0.01 ] <- "gray"
+
+ggplot(res) +
+  aes(log2FoldChange,
+      -log(padj)) +
+  geom_point(color = mycols) +
+  xlab("Log2(FoldChange)") +
+  ylab("-Log(P-value)") +
+  geom_vline(xintercept = c(-2,2)) +
+  geom_hline(yintercept = 0.01)
+```
+
+### Adding gene annotation
+
+> Q5. Use the mapIDs() function multiple times to add SYMBOL, ENTREZID and GENENAME annotation to our results by completing the code below.
+
+```{r, message = FALSE}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+columns(org.Hs.eg.db)
+
+res$symbol = mapIds(org.Hs.eg.db,
+                    keys = row.names(res), 
+                    keytype = "ENSEMBL",
+                    column = "SYMBOL",
+                    multiVals = "first")
+
+res$entrez = mapIds(org.Hs.eg.db,
+                    keys = row.names(res),
+                    keytype = "ENSEMBL",
+                    column = "ENTREZID",
+                    multiVals = "first")
+
+res$name =   mapIds(org.Hs.eg.db,
+                    keys = row.names(res),
+                    keytype = "ENSEMBL",
+                    column = "GENENAME",
+                    multiVals = "first")
+
+head(res, 10)
+```
+
+> Q6. Finally for this section let's reorder these results by adjusted p-value and save them to a CSV file in your current project directory.
+
+```{r}
+res = res[order(res$pvalue),]
+
+write.csv(res, file ="deseq_results.csv")
+```
+
+## Pathway Analysis
+
+```{r, message = FALSE}
+library(pathview)
+library(gage)
+library(gageData)
+```
+
+```{r}
+data(kegg.sets.hs)
+data(sigmet.idx.hs)
+
+# Focus on signaling and metabolic pathways only
+kegg.sets.hs = kegg.sets.hs[sigmet.idx.hs]
+
+# Examine the first 3 pathways
+head(kegg.sets.hs, 3)
+```
+
+Creating a fold-changes vector for the `gage()` function input:
+
+```{r}
+foldchanges <- res$log2FoldChange
+names(foldchanges) <- res$entrez
+
+head(foldchanges)
+```
+
+Now we can run the `gage()` analysis:
+
+```{r}
+keggres <- gage(foldchanges, gsets = kegg.sets.hs)
+
+attributes(keggres)
+```
+
+We can look at the first few down (less) pathways:
+
+```{r}
+head(keggres$less)
+```
+
+Let's look at the pathview for hsa04110 Cell cycle:
+
+```{r}
+pathview(gene.data=foldchanges, pathway.id="hsa04110")
+```
+
+![Cell cycle pathview](hsa04110.pathview.png)
+
+> Q7. Can you do the same procedure as above to plot the pathview figures for the top 5 down-regulated pathways?
+
+```{r}
+keggres_pathways <- row.names(keggres$less)[1:5]
+
+keggres_ids <- substr(keggres_pathways, start = 1, stop = 8)
+keggres_ids
+```
+
+```{r}
+pathview(gene.data = foldchanges, pathway.id = keggres_ids, species = "hsa")
+```
+![Cell cycle pathview](hsa04110.pathview.png)
+
+![DNA replication pathview](hsa03030.pathview.png)
+
+![RNA transport pathview](hsa03013.pathview.png)
+
+![Homologous recombination pathview](hsa03440.pathview.png)
+
+![Oocyte meiosis](hsa04114.pathview.png)
+
+## Gene Ontology (GO)
+
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+
+# Focus on Biological Process subset of GO
+gobpsets = go.sets.hs[go.subs.hs$BP]
+
+gobpres = gage(foldchanges, gsets=gobpsets)
+
+lapply(gobpres, head)
+```
+
+## Reactome Analysis
+
+Output a list of our significant genes into a text file:
+
+```{r}
+sig_genes <- res[res$padj <= 0.05 & !is.na(res$padj), "symbol"]
+print(paste("Total number of significant genes:", length(sig_genes)))
+
+write.table(sig_genes, file="significant_genes.txt", row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+> Q8: What pathway has the most significant “Entities p-value”? Do the most significant pathways listed match your previous KEGG results? What factors could cause differences between the two methods?
+
+The pathway with the most significant "Entities p-value" is "Cell cycle, mitotic," which aligns with the most significant pathway in my previous KEGG results. A factor that could cause differences between these methods is that they each use different databases, which may contain slightly different information about what pathways the genes are involved in.
+
+!["Cell cycle, mitotic" diagrame from Reactome](R-HSA-69278.png)

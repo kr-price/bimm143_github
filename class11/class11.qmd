@@ -1,0 +1,208 @@
+---
+title: "Class 11: Protein Structure Prediction with AlphaFold"
+author: "Kris Price (PID: A17464127)"
+format: pdf
+toc: true
+---
+
+## Background
+
+We saw last time that the main repository for biomolecular structures (the PDB database) only has ~250,000 entries.
+
+UniProtKB (the main protein sequence database) has over 200 million entries!
+
+In this hands-on session we will utilize AlphaFold to predict protein structure from sequence (Jumper et al. 2021).
+
+Without the aid of such approaches, it can take years of expensive laboratory work to determine the structure of just one protein. With AlphaFold we can now accurately compute a typical protein structure in as little as ten minutes.
+
+
+
+## The EBI AlphaFold Database
+
+The EBI alphafold database contains lots of computed structure models. It is increasingly likely that the structure you are interested in is already in this database at < https://alphafold.ebi.ac.uk >
+
+There are 3 major outputs from AlphaFold
+
+1. A model of structure in **PDB** format.
+2. A **pLDDT score**: that tells us how confident the model is for a given residue in your protein (High values are good, above 70).
+3. A **PAE score** that tells us about protein packing quality.
+
+If you can't find a matching entry for the sequence you are interested in AFDB, you can run AlphaFold yourself...
+
+
+## Running AlphaFold
+
+We will use ColabFold to run AlphaFold on our sequence < https://github.com/sokrypton/ColabFold >
+
+![Figure from AlphaFold](images/alphafold.png)
+
+## Interpreting Results
+
+## Custom analysis of resulting models
+
+We can read all the AlphaFold results into R and do more quantitative analysis than just viewing the structures in Mol-star:
+
+Read all the PDB models:
+```{r}
+library(bio3d)
+
+pdb_files <- list.files("hivpr_23119/", pattern = ".pdb", full.names = T)
+
+pdbs <- pdbaln(pdb_files, fit=TRUE, exefile="msa")
+```
+
+```{r}
+# library(bio3dview)
+# view.pdbs(pdbs)
+```
+
+How similar or different are my models?
+
+```{r}
+rd <- rmsd(pdbs)
+
+library(pheatmap)
+
+colnames(rd) <- paste0("m",1:5)
+rownames(rd) <- paste0("m",1:5)
+pheatmap(rd)
+```
+
+### Plotting pLDDT values
+
+We can also plot the pLDDT values across all models, using `1hsg` as the reference PDB structure:
+
+```{r}
+pdb <- read.pdb("1hsg")
+
+plotb3(pdbs$b[1,], typ="l", lwd=2, sse=pdb)
+points(pdbs$b[2,], typ="l", col="red")
+points(pdbs$b[3,], typ="l", col="blue")
+points(pdbs$b[4,], typ="l", col="darkgreen")
+points(pdbs$b[5,], typ="l", col="orange")
+abline(v=100, col="gray")
+```
+
+Using the `core.find()` function, we can improve the superimposing of our models:
+
+```{r}
+core <- core.find(pdbs)
+
+core.inds <- print(core, vol=0.5)
+
+xyz <- pdbfit(pdbs, core.inds, outpath="corefit_structures")
+```
+
+### Plotting RMSF
+
+We can examine the RMSF between positions of the structure. RMSF is often used as a measure of conformational variance along the structure:
+
+```{r}
+rf <- rmsf(xyz)
+
+plotb3(rf, sse=pdb)
+abline(v=100, col="gray", ylab="RMSF")
+```
+
+The second chain seems to be very similar across all models compared to the first chain.
+
+### Plotting PAE for domains
+
+AlphaFold also outputs the Predicted Aligned Error (PAE) for each model structure. These are contained in ".json" files, which we can read using the `jsonlite` package:
+
+```{r}
+library(jsonlite)
+
+pae_files <- list.files(path="hivpr_23119",
+                        pattern=".*model.*\\.json",
+                        full.names = TRUE)
+```
+
+As an example, we can read and plot the 1st and 5th files against each other:
+
+```{r}
+pae1 <- read_json(pae_files[1],simplifyVector = TRUE)
+pae5 <- read_json(pae_files[5],simplifyVector = TRUE)
+
+attributes(pae1)
+
+head(pae1$plddt)
+```
+
+The maximum PAE values are useful for ranking models (the lower the PAE score, the better. Here, we can see that model 5 is much worse than model 1:
+
+```{r}
+pae1$max_pae
+
+pae5$max_pae
+```
+
+We can plot the N by N (where N is the number of residues) PAE scores with `ggplot` or with functions from the `Bio3D` package. Here's a plot for model 1:
+
+```{r}
+plot.dmat(pae1$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)")
+```
+And here's a plot for model 5:
+
+```{r}
+plot.dmat(pae5$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)",
+          grid.col = "black",
+          zlim=c(0,30))
+```
+
+Here's the model 1 plot again, but using the same z range as the model 5 plot:
+
+```{r}
+plot.dmat(pae1$pae, 
+          xlab="Residue Position (i)",
+          ylab="Residue Position (j)",
+          grid.col = "black",
+          zlim=c(0,30))
+```
+
+### Residue conservation from alignment file
+
+```{r}
+aln_file <- list.files(path="hivpr_23119",
+                       pattern=".a3m$",
+                        full.names = TRUE)
+aln_file
+
+aln <- read.fasta(aln_file[1], to.upper = TRUE)
+```
+
+We can find the number of sequences in this alignment using the `dim()` function:
+
+```{r}
+dim(aln$ali)
+```
+
+We can also score residue conservation in the alignment with the `conserv()` function:
+
+```{r}
+sim <- conserv(aln)
+
+plotb3(sim[1:99], sse=trim.pdb(pdb, chain="A"),
+       ylab="Conservation Score")
+```
+
+The most-conserved residues seem to be in the 20th-30th positions! These positions will stand out even more if we generate a consensus sequence with a very high cut-off value:
+
+```{r}
+con <- consensus(aln, cutoff = 0.9)
+con$seq
+```
+
+For a final visualization of these functionally important sites, we can map this conservation score to the Occupancy column of a PDB file to view in Mol*:
+
+```{r}
+m1.pdb <- read.pdb(pdb_files[1])
+occ <- vec2resno(c(sim[1:99], sim[1:99]), m1.pdb$atom$resno)
+write.pdb(m1.pdb, o=occ, file="m1_conserv.pdb")
+```
+
+![Model 1 with Conservation Scores (Conserved sections are in darker purple)](images/M1_CONSERV.png)

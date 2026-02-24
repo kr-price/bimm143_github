@@ -1,0 +1,39 @@
+---
+title: "Class 6 Function HW"
+author: "Kris Price (PID: A17464127"
+format: pdf
+---
+
+This function takes a PDB identifier as an input. When you run it, the following functions will run:
+
+- `read.pdb()` will read in the PDB coordinate file
+
+- `trim.pdb()`will select a subset of the protein's atoms. My function selects atoms in chain A (using the `chain = "A"` argument) and atoms of type "CA" (using the `elety = "CA"` argument), and saves it as the `seq.chainA` variable
+
+- Selects the values in the `b` column of the `atom` dataframe inside of the `seq.chainA` variable, and then saves the values into the `seq.b` variable
+
+- `plotb3()` creates a plot of Residue by Bfactor for `seq.b`
+
+> Make sure you've run `install.packages("bio3d)` and `library(bio3d)` before running the function
+
+```{r}
+library(bio3d)
+
+plot_sequence <- function(pdb) {
+  seq <- read.pdb(pdb)
+  
+  seq.chainA <- trim.pdb(seq, chain="A", elety="CA")
+  
+  seq.b <- seq.chainA$atom$b
+  
+  plotb3(seq.b, sse = seq.chainA, typ="l", ylab="Bfactor")
+}
+```
+
+Running the code, using PDB identifier "4AKE" as an example:
+
+```{r}
+plot_sequence("4AKE")
+```
+
+
