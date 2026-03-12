@@ -10,10 +10,10 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 - Class 05: [Data exploration and visualization in R](/class05/class05.md)
   
 - Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.md)
-  
-- Class 07: [Hands on with Principal Component Analysis (PCA)](/class07/class07.md)
 
 *Using R and Other Tools for Bioinformatics Analyses*
+
+- Class 07: [Hands on with Principal Component Analysis (PCA)](/class07/class07.md)
 
 - Class 08: [Unsupervised Learning Mini-Project](/class08/class08.md)
 
