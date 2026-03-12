@@ -1,0 +1,133 @@
+---
+title: "Class 17: Obtaining and processing SRA datasets on AWS"
+author: "Kris Price (PID: A17464127)"
+format: pdf
+---
+
+## Downstream Analysis
+
+```{r}
+library(tximport)
+library(rhdf5)
+
+# setup the folder and filenames to read
+folders <- dir(pattern="SRR21568*")
+samples <- sub("_quant", "", folders)
+files <- file.path( folders, "abundance.h5" )
+names(files) <- samples
+
+txi.kallisto <- tximport(files, type = "kallisto", txOut = TRUE)
+```
+
+```{r}
+head(txi.kallisto$counts)
+```
+
+We can see how many transcripts we have for each sample:
+
+```{r}
+colSums(txi.kallisto$counts)
+```
+
+And how many transcripts are detected in at least one sample:
+
+```{r}
+sum(rowSums(txi.kallisto$counts) > 0)
+```
+
+Before subsequent analysis, we should filter out annotated transcripts with no reads:
+
+```{r}
+to.keep <- rowSums(txi.kallisto$counts) > 0
+kset.nonzero <- txi.kallisto$counts[to.keep, ]
+```
+
+AND those with no change over the samples:
+
+```{r}
+keep2 <- apply(kset.nonzero, 1, sd) > 0
+x <- kset.nonzero[keep2, ]
+```
+
+### Principal Component Analysis
+
+We can now apply any exploratory analysis technique to this counts matrix! As an example, we will perform a PCA of the transcriptomic profiles of these samples:
+
+```{r}
+pca <- prcomp(t(x), scale = TRUE)
+
+summary(pca)
+```
+
+Now we can use the first two PCs as a coordinate system for visualizing the summarized transcriptomic profiles of each sample:
+
+```{r}
+plot(pca$x[,1], pca$x[,2],
+     col=c("blue","blue","red","red"),
+     xlab="PC1", ylab="PC2", pch=16)
+```
+
+> Q. Use ggplot to make a similar figure of PC1 vs PC2 and a seperate figure PC1 vs PC3 and PC2 vs PC3.
+
+PC1 vs. PC2:
+
+```{r}
+library(tidyverse)
+library(ggrepel)
+
+colData <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(colData) <- colnames(txi.kallisto$counts)
+
+y <- as.data.frame(pca$x)
+
+y$Condition <- as.factor(colData$condition)
+
+ggplot(y, aes(PC1, PC2, col = Condition)) +
+  geom_point() +
+  geom_text_repel(label = rownames(y))
+```
+
+PC1 vs. PC3:
+
+```{r}
+ggplot(y, aes(PC1, PC3, col = Condition)) +
+  geom_point() +
+  geom_text_repel(label = rownames(y))
+```
+
+
+PC2 vs. PC3:
+
+```{r}
+ggplot(y, aes(PC2, PC3, col = Condition)) +
+  geom_point() +
+  geom_text_repel(label = rownames(y))
+```
+
+
+## Differential-Expression Analysis
+
+We can use DESeq2 to complete differential-expression analysis:
+
+```{r}
+sampleTable <- data.frame(condition = factor(rep(c("control", "treatment"), each = 2)))
+rownames(sampleTable) <- colnames(txi.kallisto$counts)
+```
+
+```{r, message = FALSE}
+library(DESeq2)
+```
+
+```{r}
+dds <- DESeqDataSetFromTximport(txi.kallisto,
+                                sampleTable,
+                                design = ~condition)
+
+dds <- DESeq(dds)
+
+res <- results(dds)
+head(res)
+```
+
+These results can go on to be visualized and used for pathway analysis.
+
