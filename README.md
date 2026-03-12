@@ -9,7 +9,7 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
   
 - Class 05: [Data exploration and visualization in R](/class05/class05.qmd)
   
-- Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.qmd)
+- Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.html)
   
 - Class 07:
 
