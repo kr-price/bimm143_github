@@ -1,2 +1,16 @@
-# bimm143_github
-My classwork for [BIMM 143](https://bioboot.github.io/bimm143_W26/) at UC San Diego
+# BIMM 143 Classwork
+This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bimm143_W26/) at UC San Diego.
+
+## Index of Material
+
+*Introductory material: Working with R*
+
+- Class 04: 
+- Class 05: [Data exploration and visualization in R](/class05/class05.qmd)
+- Class 06:
+- Class 07:
+
+*Using R and Other Tools for Bioinformatics Analyses*
+- Class 08:
+- Class 09:
+- Class 10:
