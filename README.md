@@ -29,8 +29,6 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 
 - Class 14: [RNA-Seq analysis mini-project](/class14/class14.md)
 
-- Class 16:
+- Class 16 & 17: [Essential UNIX for bioinformatics & Analyzing sequencing data in the cloud](/class17/class17.md)
 
-- Class 17:
-
-- Class 18:
+- Class 18: [Mini Project: Investigating Pertussis Resurgence](/class18/class18.md)
