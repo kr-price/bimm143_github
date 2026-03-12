@@ -5,9 +5,12 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 
 *Introductory material: Working with R*
 
-- Class 04: 
+- Class 04: [Introduction to R](/class04/class04.qmd)
+  
 - Class 05: [Data exploration and visualization in R](/class05/class05.qmd)
-- Class 06:
+  
+- Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.qmd)
+  
 - Class 07:
 
 *Using R and Other Tools for Bioinformatics Analyses*
