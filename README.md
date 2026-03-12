@@ -5,11 +5,11 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 
 *Introductory material: Working with R*
 
-- Class 04: [Introduction to R](/class04/class04.qmd)
+- Class 04: [Introduction to R](/class04/class04.md)
   
 - Class 05: [Data exploration and visualization in R](/class05/class05.md)
   
-- Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.qmd)
+- Class 06: [R functions and R packages from CRAN and BioConductor](/class06/class06.md)
   
 - Class 07: [Hands on with Principal Component Analysis (PCA)](/class07/class07.md)
 
@@ -19,15 +19,15 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 
 - Class 09: [Candy Mini-Project](/class09/class09.md)
 
-- Class 10:
+- Class 10: Structural Bioinformatics (Pt. 1)
 
-- Class 11:
+- Class 11: [Protein Structure Prediction with AlphaFold](/class11/class11.md)
 
-- Class 12:
+- Class 12: [Genome Informatics](/class12/class12.md)
 
-- Class 13:
+- Class 13: [Transcriptomics and the analysis of RNA-Seq data](/class13/class13.md)
 
-- Class 14:
+- Class 14: [RNA-Seq analysis mini-project](/class14/class14.md)
 
 - Class 16:
 
