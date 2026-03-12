@@ -1,0 +1,17 @@
+---
+title: "Class 19 Mini-Project"
+format: html
+---
+
+```{r}
+library(bio3d)
+
+fasta <- read.fasta("A17464127_mutant_seq.fa")
+mutant <- paste0(fasta$ali[2, ], collapse = "")
+domain <- paste0(fasta$ali[2, 600:1114], collapse = "")
+```
+
+```{r}
+conserv(fasta)
+```
+
