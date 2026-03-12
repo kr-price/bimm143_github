@@ -19,7 +19,7 @@ This is a repository of my classwork for [BIMM 143](https://bioboot.github.io/bi
 
 - Class 09: [Candy Mini-Project](/class09/class09.md)
 
-- Class 10: Structural Bioinformatics (Pt. 1)
+- Class 10: [Structural Bioinformatics (Pt. 1)](/class10/class10.html)
 
 - Class 11: [Protein Structure Prediction with AlphaFold](/class11/class11.md)
 
